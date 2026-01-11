@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Outer Space</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: Arial, sans-serif;
+    }
+    
+    h1 {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #fff;
+      margin: 0;
+      z-index: 10;
+    }
+    
+    #gameContainer {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+    }
+    
+    canvas {
+      display: block;
+      background-color: #000;
+      border: 1px solid #333;
+      image-rendering: pixelated;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: crisp-edges;
+    }
+    
+    #loadingIndicator {
+      position: absolute;
+      color: #fff;
+      font-size: 18px;
+      z-index: 5;
+    }
+    
+    #errorMessage {
+      position: absolute;
+      color: #ff6666;
+      font-size: 16px;
+      z-index: 5;
+      text-align: center;
+      max-width: 80%;
+    }
+    
+    @media (max-width: 768px) {
+      canvas {
+        border: none;
+      }
+      
+      h1 {
+        font-size: 16px;
+        top: 5px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Outer Space</h1>
+  
+  <div id="gameContainer">
+    <div id="loadingIndicator">Loading game...</div>
+    <div id="errorMessage" style="display: none;"></div>
+    <canvas id="canvas"></canvas>
+  </div>
+  
+  <script type="text/javascript">
+    var baseWidth = 1280;
+    var baseHeight = 720;
+    
+    var Module = {
+      canvas: (function(){
+        var canvas = document.getElementById('canvas');
+        canvas.width = baseWidth;
+        canvas.height = baseHeight;
+        return canvas;
+      })(),
+      
+      preRun: [],
+      postRun: [],
+      
+      print: function(text) {
+        console.log('STDOUT: ' + text);
+      },
+      
+      printErr: function(text) {
+        console.error('STDERR: ' + text);
+        showError('Game error: ' + text);
+      },
+      
+      onRuntimeInitialized: function() {
+        console.log("Space game initialized!");
+        hideLoading();
+        resizeCanvas();
+      },
+      
+      onAbort: function(what) {
+        console.error("Game aborted:", what);
+        showError("Game failed to load: " + what);
+      },
+      
+      // Add these for better debugging
+      locateFile: function(path, prefix) {
+        console.log('Loading file:', path);
+        return prefix + path;
+      }
+    };
+
+    function hideLoading() {
+      document.getElementById('loadingIndicator').style.display = 'none';
+    }
+    
+    function showError(message) {
+      hideLoading();
+      var errorDiv = document.getElementById('errorMessage');
+      errorDiv.innerHTML = message + '<br><br>Check browser console for details.';
+      errorDiv.style.display = 'block';
+    }
+
+    function resizeCanvas() {
+      var canvas = Module.canvas;
+      if (!canvas) return;
+      
+      var aspect = baseWidth / baseHeight;
+      var margin = 20;
+      var maxWidth = window.innerWidth - margin;
+      var maxHeight = window.innerHeight - margin;
+      
+      var newWidth, newHeight;
+      
+      if (maxWidth / maxHeight > aspect) {
+        newHeight = maxHeight;
+        newWidth = newHeight * aspect;
+      } else {
+        newWidth = maxWidth;
+        newHeight = newWidth / aspect;
+      }
+      
+      canvas.style.width = Math.floor(newWidth) + 'px';
+      canvas.style.height = Math.floor(newHeight) + 'px';
+      
+      console.log(`Canvas resized to: ${newWidth}x${newHeight}`);
+    }
+
+    window.addEventListener('resize', function() {
+      setTimeout(resizeCanvas, 100);
+    });
+    
+    window.addEventListener('load', resizeCanvas);
+    
+    document.addEventListener('contextmenu', function(e) {
+      e.preventDefault();
+      return false;
+    });
+    
+    document.addEventListener('touchstart', function(e) {
+      if (e.target === Module.canvas) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+    
+    document.addEventListener('touchend', function(e) {
+      if (e.target === Module.canvas) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+    
+    document.addEventListener('touchmove', function(e) {
+      if (e.target === Module.canvas) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+    
+    // Check if the script file exists
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        if (typeof Module.asm === 'undefined' && document.getElementById('loadingIndicator').style.display !== 'none') {
+          showError('Game files not found. Make sure space.js and space.wasm are in the same directory as this HTML file.');
+        }
+      }, 5000); // Wait 5 seconds before showing error
+    });
+  </script>
+  
+  <!-- Load the Emscripten generated JavaScript file -->
+  <script src="space.js?v=2" onerror="showError('Failed to load space.js file. Make sure it exists in the same directory.')"></script>
+</body>
+</html>
